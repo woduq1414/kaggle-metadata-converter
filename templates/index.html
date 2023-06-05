@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kaggle Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        #container {
+            margin-top: 20px;
+
+            padding: 10px;
+
+            white-space: pre-wrap;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        #origin, #converted {
+            background-color: #fff;
+            width: 48%;
+            border: 1px solid #ccc;
+            padding: 1rem;
+            /*float: left;*/
+            /*background: red;*/
+        }
+
+        #inputURL {
+            width: 50%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 2rem;
+            margin: 0 auto;
+            height: 2rem;
+
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #modsBtn,
+        #dcBtn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #ff07c3;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+
+        }
+
+        #modsBtn {
+            margin-right: 10px;
+        }
+
+        #btnContainer {
+            display: flex;
+            justify-content: center;
+        }
+
+        #modsBtn:hover,
+        #dcBtn:hover {
+            background-color: #d30ea5;
+        }
+    </style>
+</head>
+<body>
+<h1>Kaggle 데이터셋 메타데이터 변환기</h1>
+<input type="text" id="inputURL" placeholder="Kaggle 주소 입력">
+<br>
+<div id="btnContainer">
+    <button id="modsBtn">MODS로 변환</button>
+    <button id="dcBtn">DC로 변환</button>
+</div>
+
+<div id="container">
+    <div id="origin"></div>
+    <div id="converted"></div>
+</div>
+
+<script>
+    function do_convert(url, schema) {
+        // get request to /convert?url=url&schema=mods
+
+        var request = new XMLHttpRequest();
+        request.open('GET', '/convert?url=' + url + '&schema=' + schema, false);
+        request.send(null);
+        console.log(request.responseText);
+
+        let data = JSON.parse(request.responseText)["result"];
+
+        let converted = document.getElementById('converted');
+        let origin = document.getElementById('origin');
+        converted.textContent = formatXml(data["converted"])
+        origin.textContent = formatJson(data["origin"])
+
+    }
+
+    function formatJson(json) {
+        return JSON.stringify(json, null, 2);
+    }
+
+    document.getElementById('modsBtn').addEventListener('click', function () {
+
+        do_convert(document.getElementById('inputURL').value, 'mods');
+    });
+
+    document.getElementById('dcBtn').addEventListener('click', function () {
+
+        do_convert(document.getElementById('inputURL').value, 'dc');
+    });
+
+    function formatXml(xml) {
+        var formattedXml = '';
+        var reg = /(>)(<)(\/*)/g;
+        xml = xml.replace(reg, '$1\r\n$2$3');
+        var pad = 0;
+        xml.split('\r\n').forEach(function (node) {
+            var indent = 0;
+            if (node.match(/.+<\/\w[^>]*>$/)) {
+                indent = 0;
+            } else if (node.match(/^<\/\w/)) {
+                if (pad !== 0) {
+                    pad -= 1;
+                }
+            } else if (node.match(/^<\w[^>]*[^\/]>.*$/)) {
+                indent = 1;
+            } else {
+                indent = 0;
+            }
+
+            var padding = '';
+            for (var i = 0; i < pad; i++) {
+                padding += '    ';
+            }
+
+            formattedXml += padding + node + '\r\n';
+            pad += indent;
+        });
+
+        return formattedXml;
+    }
+</script>
+</body>
+</html>
